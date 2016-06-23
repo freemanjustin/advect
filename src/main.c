@@ -767,7 +767,7 @@ void get_dt( double* dt, double	max_vel, double min_mesh ) {
 
 void test_interp_netcdf(e *E, char *file1, char *file2){
 
-	int	i,j,k,t,el;
+	int	i,j,k,t,el,this_el;
 
 	int	nx, ny;
 
@@ -899,8 +899,8 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 
 				if(length < min_mesh ) {
 					min_mesh = length;
-					printf("\t\tcurrent min x distance is %f\n", min_mesh);
-					printf("\t\tthis is at: element = %d, i = %d, j = %d\n",el, i, j);
+					//printf("\t\tcurrent min x distance is %f\n", min_mesh);
+					//printf("\t\tthis is at: element = %d, i = %d, j = %d\n",el, i, j);
 				}
 
 			}
@@ -954,11 +954,11 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 	srand ( time(NULL) );
 	double center_lat =  -47.336 ;
   double center_lon =  144.8669;
-	double box_width = 0.0;
+	double box_width = 0.1;
   min_lon = center_lon - box_width;     max_lon = center_lon + box_width;
   min_lat = center_lat - box_width;     max_lat = center_lat + box_width;
 
-	int	nParticles = 1;
+	int	nParticles = 100;
 	fprintf(out,"#%d %d\n", nParticles, E->nc.t);
 	for(k=0;k<nParticles;k++){
 
@@ -990,29 +990,17 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 				}
 			}
 
-			printf("t = %d, max_velocity is = %f\n", t, max_vel);
+			//printf("t = %d, max_velocity is = %f\n", t, max_vel);
 
 			// convert pos from lon lat to cartesian
-			//x = R * cos(lat) * cos(lon)
-			//y = R * cos(lat) * sin(lon)
-			//z = R * sin(lat)
-
-			// convert back
-			// lon = atan2(y, x)
-			// lat = asin(z / R)
-
-			//cart_pos[0] = R*cos(d2r(pos[1]))*cos(d2r(pos[0]));	// x in conversion formula
-			//cart_pos[1] = R*cos(d2r(pos[1]))*sin(d2r(pos[0]));	// y in conversion formula
-			//cart_pos[2] = R*sin(d2r(pos[1]));										// z in conversion formula
-
 			// simple 2d mapping to equidistant rectangular map projection
 			// x = R * lon *  cos(lat)
 			// y = R * lat
 			cart_pos[0] = R * d2r(pos[0]) * cos(d2r(pos[1]));
 			cart_pos[1] = R * d2r(pos[1]);
 
-			printf("## pre: pos: %f, %f\n", pos[0],pos[1]);
-			printf("## becomes: cart: %f, %f\n", cart_pos[0], cart_pos[1]);
+			//printf("## pre: pos: %f, %f\n", pos[0],pos[1]);
+			//printf("## becomes: cart: %f, %f\n", cart_pos[0], cart_pos[1]);
 
 			// convert cart_pos back to lon lat
 			//pos[0] = r2d(atan2(cart_pos[1], cart_pos[0]));	// calculate longitude first
@@ -1020,10 +1008,10 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 			// convert back:
 			// lat = y/R;
 			// lon = x / (R*cos(lat))
-			pos[1] = r2d(cart_pos[1]/R);
-			pos[0] = r2d(cart_pos[0] / (R*cos(d2r(pos[1]))));
+			//pos[1] = r2d(cart_pos[1]/R);
+			//pos[0] = r2d(cart_pos[0] / (R*cos(d2r(pos[1]))));
 
-			printf("## conv back: pos: %f, %f\n", pos[0],pos[1]);
+			//printf("## conv back: pos: %f, %f\n", pos[0],pos[1]);
 			//printf("## becomes: cart: %f, %f\n\n", cart_pos[0], cart_pos[1]);
 			//exit(1);
 
@@ -1049,40 +1037,41 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 			vel[0] = interp_value;	// velocity is in metres per second
 
 			// set up nodal value for v
-			el = 0;
+			this_el = 0;
 			for(i=0;i<E->ny;i++){
 				for(j=0;j<E->nx;j++){
 
-					E->el[el].node_value[0] = E->v[t][i][j];
-					E->el[el].node_value[1] = E->v[t][i][j+1];
-					E->el[el].node_value[2] = E->v[t][i+1][j+1];
-					E->el[el].node_value[3] = E->v[t][i+1][j];
+					E->el[this_el].node_value[0] = E->v[t][i][j];
+					E->el[this_el].node_value[1] = E->v[t][i][j+1];
+					E->el[this_el].node_value[2] = E->v[t][i+1][j+1];
+					E->el[this_el].node_value[3] = E->v[t][i+1][j];
 
-					el++;
+					this_el++;
 				}
 			}
-			el = get_owner_element(E, pos);
+			// do we need to do this twice??
+			//el = get_owner_element(E, pos);
 			// interpolate velocity to this point
 			interpolate_point(&E->el[el], &interp_value);
 			vel[1] = interp_value;	// velocity is in metres per second
 
 			// advect the partcle
-			//dt = 10800.0; // ofam surface fields are 3 hourly
+			// ofam surface fields are 3 hourly
 			get_dt( &dt, max_vel, min_mesh );
 			current_time += dt;
-			printf("dt = %f\nu = %f, v = %f\nx = %f, y = %f\n", dt, vel[0], vel[1], cart_pos[0], cart_pos[1]);
+			//printf("dt = %f\nu = %f, v = %f\nx = %f, y = %f\n", dt, vel[0], vel[1], cart_pos[0], cart_pos[1]);
 			update_particle_position_euler(cart_pos,vel,dt);
-			printf("new position after advection:\n\tx = %f, y = %f\n\n", cart_pos[0], cart_pos[1]);
+			//printf("new position after advection:\n\tx = %f, y = %f\n\n", cart_pos[0], cart_pos[1]);
 			// convert cart_pos back to lon lat
 			pos[1] = r2d(cart_pos[1]/R);	// calc lat first
 			pos[0] = r2d(cart_pos[0] / (R*cos(d2r(pos[1]))));	// now lon
-			printf("new position after advection:\n\tlon = %f, lat = %f\n\n", pos[0], pos[1]);
+			//printf("new position after advection:\n\tlon = %f, lat = %f\n\n", pos[0], pos[1]);
 
 
 			fprintf(out,"%f %f %f %f\n", pos[0], pos[1], vel[0], vel[1]);
 			// figure out what time level we are at
 			t = floor(current_time/10800.0);
-			printf("**** current_time = %f, dt = %f, t = %d\n",current_time,dt,t);
+			//printf("**** current_time = %f, dt = %f, t = %d\n",current_time,dt,t);
 		}while(t<E->nc.t);
 		fprintf(out,"\n");
 	}
