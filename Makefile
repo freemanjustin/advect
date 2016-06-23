@@ -7,10 +7,11 @@
 ##################################################################
 
 
-OBJ=	./src/main.o 
+OBJ=	./src/main.o \
+	./src/spheriq_dist.o
 
 # Compliler flags
-INC=    -I./
+INC=    -I./include/
 
 CFLAGS=	-O3 -g -Wall -DNETCDF
 
