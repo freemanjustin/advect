@@ -751,36 +751,28 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 		//for(t=0;t<E->nc.t;t++){
 		do{
 
-
-			/*
-			if(current_time > 0.0){
-				// time interpolat the velocity data to the current time step
-				// since this code knows nothing about time we just interpolate fractionally between end points
-
-				// first figure out our bounding times in the data
-				int		time_start = floor(current_time/10800.0);
-				int		time_end = time_start+1;	// fix this end point to avoid stepping out of memory bounds
-				double	mu = current_time/10800.0 - (double)time_start;
-				//printf("mu = %f\n", mu);
-				for(i=0;i<E->ny;i++){
-					for(j=0;j<E->nx;j++){
-			          E->uinterp[i][j] = LinearInterpolate( E->u[time_start][i][j],E->u[time_end][i][j], mu);
-								E->vinterp[i][j] = LinearInterpolate( E->v[time_start][i][j],E->v[time_end][i][j], mu);
-			    }
-				}
+			// linear time interpolation of velocity fields
+			double integral;
+			double	mu = modf(fmod(current_time, 10800.0), &integral);//current_time/10800.0 - (double)t;
+			//printf("mu = %f\n", mu);
+			for(i=0;i<E->ny;i++){
+				for(j=0;j<E->nx;j++){
+			    E->uinterp[i][j] = LinearInterpolate( E->u[t][i][j],E->u[t+1][i][j], mu);
+					E->vinterp[i][j] = LinearInterpolate( E->v[t][i][j],E->v[t+1][i][j], mu);
+			  }
 			}
-			*/
+
 
 			// find maximum velocity for this time level
 			max_vel = -10000.0;
 			for(i=0;i<E->ny;i++){
 				for(j=0;j<E->nx;j++){
 
-					if(E->u[t][i][j] > max_vel )
-						max_vel = E->u[t][i][j];
+					if(E->uinterp[i][j] > max_vel )
+						max_vel = E->uinterp[i][j];
 
-					if(E->v[t][i][j] > max_vel )
-						max_vel = E->v[t][i][j];
+					if(E->vinterp[i][j] > max_vel )
+						max_vel = E->vinterp[i][j];
 
 				}
 			}
@@ -815,15 +807,15 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 			for(i=0;i<E->ny;i++){
 				for(j=0;j<E->nx;j++){
 
-					E->el[el].node_value[0][0] = E->u[t][i][j];
-					E->el[el].node_value[1][0] = E->u[t][i][j+1];
-					E->el[el].node_value[2][0] = E->u[t][i+1][j+1];
-					E->el[el].node_value[3][0] = E->u[t][i+1][j];
+					E->el[el].node_value[0][0] = E->uinterp[i][j];
+					E->el[el].node_value[1][0] = E->uinterp[i][j+1];
+					E->el[el].node_value[2][0] = E->uinterp[i+1][j+1];
+					E->el[el].node_value[3][0] = E->uinterp[i+1][j];
 
-					E->el[el].node_value[0][1] = E->v[t][i][j];
-					E->el[el].node_value[1][1] = E->v[t][i][j+1];
-					E->el[el].node_value[2][1] = E->v[t][i+1][j+1];
-					E->el[el].node_value[3][1] = E->v[t][i+1][j];
+					E->el[el].node_value[0][1] = E->vinterp[i][j];
+					E->el[el].node_value[1][1] = E->vinterp[i][j+1];
+					E->el[el].node_value[2][1] = E->vinterp[i+1][j+1];
+					E->el[el].node_value[3][1] = E->vinterp[i+1][j];
 
 					el++;
 				}
@@ -864,7 +856,7 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 			t = floor(current_time/10800.0);	// only valid for 3 hourly files, should figure this out dynamically!
 
 			//printf("**** current_time = %f, dt = %f, t = %d\n",current_time,dt,t);
-		}while(t<E->nc.t);
+		}while(t<E->nc.t-1);
 		fprintf(out,"\n");
 	}
 
