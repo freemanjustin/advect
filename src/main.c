@@ -142,7 +142,7 @@ void print_elements(e *E){
 		printf("Element %d:\n", i);
 		printf("\tnode pos: 0 = (%f,%f) 1 = (%f,%f) 2 = (%f,%f) 3 = (%f,%f)\n", E->el[i].node_coord[0][0], E->el[i].node_coord[0][1],E->el[i].node_coord[1][0], E->el[i].node_coord[1][1],
 			                                                                    E->el[i].node_coord[2][0], E->el[i].node_coord[2][1],E->el[i].node_coord[3][0], E->el[i].node_coord[3][1]);
-		printf("\tnode values: 0 = %f, 1 = %f, 2 = %f, 3 = %f\n", E->el[i].node_value[0], E->el[i].node_value[1], E->el[i].node_value[2], E->el[i].node_value[3]);
+		printf("\tnode values: 0 = %f, 1 = %f, 2 = %f, 3 = %f\n", E->el[i].node_value[0][0], E->el[i].node_value[1][0], E->el[i].node_value[2][0], E->el[i].node_value[3][0]);
 
 	}
 
@@ -188,7 +188,7 @@ void print_mesh(e *E, int nx, int ny){
 
 void store_mesh(e *E, int nx, int ny){
 
-	int i,j,el;
+	int i,el;
 
 	el=0;
 
@@ -240,10 +240,10 @@ int	get_owner_element(e *E, double *pos){
 	int		element;
 	int		element_new;
 	int		x_element;
-	int		y_element;
-	double	point;
+	//int		y_element;
+	//double	point;
 	double	interval_size;
-	int		check = 1;
+	//int		check = 1;
 
 	max_its = 100;
 
@@ -289,7 +289,7 @@ int	get_owner_element(e *E, double *pos){
 
 			//printf("is less than: element = %d, element_new = %d, interval_size = %f\n", element, element_new, interval_size);
 		}
-		interval_size = fabs(element_new - element);
+		interval_size = abs(element_new - element);
 		element = element_new;
 		i++;
 	}while(i<max_its);
@@ -350,7 +350,7 @@ int	get_owner_element(e *E, double *pos){
 			//printf("y: is less than: element = %d, element_new = %d\n", element, element_new);
 		}
 
-		interval_size = fabs(element_new - element);
+		interval_size = abs(element_new - element);
 		element = element_new;
 
 
@@ -586,34 +586,26 @@ void get_dt( double* dt, double	max_vel, double min_mesh ) {
 
 void test_interp_netcdf(e *E, char *file1, char *file2){
 
-	int	i,j,k,t,el,this_el;
+	int	i,j,k,t,el;
 
-	int	nx, ny;
-
-	double x,y,xstart, ystart, dx, dy;
+	double xstart, ystart;
 	double xend, yend;
 	double dt;
 
-	// element dimensions in metres
-	double	cell_width;
-	double	cell_height;
-
-	double	dlon;
-	double	dlat;
 
 	double pos[2];
 	double cart_pos[3];
 	double vel[2];
 
-	double z;
+	//double z;
 
-	double	interp_value;
+	//double	interp_value;
 	char	fname[256];
 	FILE	*out;
 
 	double length;
 	double	min_lon, max_lon, min_lat, max_lat;
-	double	min_x, min_y;
+	//double	min_x, min_y;
 	double	min_mesh, max_vel;
 	double	current_time;
 
@@ -850,7 +842,7 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 			el = get_owner_element(E, pos);
 			calculate_interpolation_weights(&E->el[el], E->xi, E->eta, pos);
 			// interpolate the nodal velocity to the current point
-			interpolate_point(&E->el[el], &vel);
+			interpolate_point(&E->el[el], vel);
 			//vel[0] = interp_value;	// velocity is in metres per second
 
 			/*
