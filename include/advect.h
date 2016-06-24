@@ -13,6 +13,8 @@
 #include <omp.h>
 #endif
 
+#include "jutil.h"
+
 #define ABS(x)		((x) < 0 ? -(x) : (x))
 #define MAX(a,b)    ( ((a) > (b)) ? (a) : (b) )
 #define MIN(a,b)    ( ((a) < (b)) ? (a) : (b) )
@@ -88,6 +90,10 @@ typedef struct{
 	double *lat;
 	double *time;
 
+  // internal interpolated field
+  double  **uinterp;
+  double  **vinterp;
+
 }e;
 
 // prototypes
@@ -104,6 +110,9 @@ void init_xi_eta(e *E);
 void generate_mesh(e *E, int nx, int ny);
 void print_elements(e *E);
 
+//
+
+int	get_owner_element(e *E, double *pos);
 
 // stuff in main
 double relative_difference(double a, double b);
@@ -123,3 +132,9 @@ float RandomFloat(float min, float max);
 void get_field(e *E, char *field_name, void* field);
 void get_attribute(e *E, char *var, char *att_name, double *att);
 void get_dimension(e *E, char *dim_name, size_t *dim);
+
+void update_particle_position_rk4( e *E, double* cart_pos, double* vel, double dt, int dim);
+
+
+// time interp
+double LinearInterpolate( double y1,double y2, double mu);

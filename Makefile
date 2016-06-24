@@ -8,7 +8,10 @@
 
 
 OBJ=	./src/main.o \
-	./src/spheriq_dist.o
+	./src/spheriq_dist.o \
+	./src/advect.o \
+	./src/interp.o \
+	./src/jutil.o
 
 # Compliler flags
 INC=    -I./include/

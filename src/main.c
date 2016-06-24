@@ -9,40 +9,6 @@ double relative_difference(double a, double b){
 	return d == 0.0 ? 0.0 : ABS(a - b) / d;	// wtf is this?
 }
 
-double ***malloc3d_double(int dim1, int dim2, int dim3)
-{
-
-	size_t		layer1_count = dim1;
-	size_t		layer2_count = dim1 * dim2;
-	size_t		layer1_size = sizeof(double ***) * layer1_count;
-	size_t		layer2_size = sizeof(double **) * layer2_count;
-
-	size_t 	layers_size = layer1_size + layer2_size ;
-
-	size_t	 	data_count = dim1 * dim2 * dim3 ;
-	size_t 	data_size = sizeof(double) * data_count;
-
-	void 	*raw_bytes = (void*)malloc(layers_size + data_size);
-
-	double ***layer1 = (double ***)(raw_bytes);
-	double **layer2 = (double **)(raw_bytes + layer1_size);
-	double *double_data = (double *)(raw_bytes + layers_size);
-
-	int i, j;
-	double **this_layer2;
-	//double *this_layer3;
-
-	for (i = 0; i < dim1; i++) {
-		layer1[i] = layer2 + (i * dim2);
-		this_layer2 = layer1[i];
-
-		for (j = 0; j < dim2; j++) {
-			this_layer2[j] = double_data + (i * dim2 * dim3 + j * dim3);
-		}
-	}
-	return layer1;
-
-}
 
 void my_fail( const int line, const char *func, const char *file, const char *msg, ... )
 {
@@ -586,7 +552,7 @@ void get_dt( double* dt, double	max_vel, double min_mesh ) {
 
 void test_interp_netcdf(e *E, char *file1, char *file2){
 
-	int	i,j,k,t,el;
+	int	i,j,k,l,t,el;
 
 	double xstart, ystart;
 	double xend, yend;
@@ -633,6 +599,8 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 	//E->field = malloc3d_double(E->nc.t+1, E->nc.y, E->nc.x); // cause the field is time, lat, lon
 	E->u = malloc3d_double(E->nc.t+1, E->nc.y, E->nc.x);
 	E->v = malloc3d_double(E->nc.t+1, E->nc.y, E->nc.x);
+	E->uinterp = malloc2d_double(E->nc.y, E->nc.x);
+	E->vinterp = malloc2d_double(E->nc.y, E->nc.x);
 
 	// read the field
 	get_field(E,"xu_ocean", &E->lon[0]);
@@ -756,14 +724,17 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 	// multiple particles
 
 	srand ( time(NULL) );
-	double center_lat =  -47.336 ;
-  double center_lon =  144.8669;
+	//double center_lat =  -47.336 ;
+  //double center_lon =  144.8669;
+
+	double center_lat = -47.408279;
+	double center_lon = 145.507584;
 	double box_width = 0.1;
   min_lon = center_lon - box_width;     max_lon = center_lon + box_width;
   min_lat = center_lat - box_width;     max_lat = center_lat + box_width;
 
 	int	nParticles = 100;
-	fprintf(out,"#%d %d\n", nParticles, E->nc.t);
+	//fprintf(out,"#%d %d\n", nParticles, E->nc.t);
 	for(k=0;k<nParticles;k++){
 
 
@@ -773,12 +744,32 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 		printf("particle %d: pos = %f, %f\n", k, pos[0], pos[1]);
 
 		// print the original particle position to the output file
-		fprintf(out,"%f %f 0.0 0.0\n", pos[0], pos[1]);
+		fprintf(out,"%f %f 0.0 0.0 0.0\n", pos[0], pos[1]);
 
 		current_time = 0.0;
-		t = 0;
+		t = 4;
 		//for(t=0;t<E->nc.t;t++){
 		do{
+
+
+			/*
+			if(current_time > 0.0){
+				// time interpolat the velocity data to the current time step
+				// since this code knows nothing about time we just interpolate fractionally between end points
+
+				// first figure out our bounding times in the data
+				int		time_start = floor(current_time/10800.0);
+				int		time_end = time_start+1;	// fix this end point to avoid stepping out of memory bounds
+				double	mu = current_time/10800.0 - (double)time_start;
+				//printf("mu = %f\n", mu);
+				for(i=0;i<E->ny;i++){
+					for(j=0;j<E->nx;j++){
+			          E->uinterp[i][j] = LinearInterpolate( E->u[time_start][i][j],E->u[time_end][i][j], mu);
+								E->vinterp[i][j] = LinearInterpolate( E->v[time_start][i][j],E->v[time_end][i][j], mu);
+			    }
+				}
+			}
+			*/
 
 			// find maximum velocity for this time level
 			max_vel = -10000.0;
@@ -838,29 +829,14 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 				}
 			}
 
+			// don't need to do this when using rk4 method
+			/*
 			// find out which element this lies within
 			el = get_owner_element(E, pos);
 			calculate_interpolation_weights(&E->el[el], E->xi, E->eta, pos);
 			// interpolate the nodal velocity to the current point
 			interpolate_point(&E->el[el], vel);
 			//vel[0] = interp_value;	// velocity is in metres per second
-
-			/*
-			// set up nodal value for v
-			this_el = 0;
-			for(i=0;i<E->ny;i++){
-				for(j=0;j<E->nx;j++){
-
-					E->el[this_el].node_value[0] = E->v[t][i][j];
-					E->el[this_el].node_value[1] = E->v[t][i][j+1];
-					E->el[this_el].node_value[2] = E->v[t][i+1][j+1];
-					E->el[this_el].node_value[3] = E->v[t][i+1][j];
-
-					this_el++;
-				}
-			}
-			// do we need to do this twice??
-			//el = get_owner_element(E, pos);
 			*/
 
 			// interpolate velocity to this point
@@ -872,7 +848,10 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 			get_dt( &dt, max_vel, min_mesh );
 			current_time += dt;
 			//printf("dt = %f\nu = %f, v = %f\nx = %f, y = %f\n", dt, vel[0], vel[1], cart_pos[0], cart_pos[1]);
-			update_particle_position_euler(cart_pos,vel,dt);
+			//update_particle_position_euler(cart_pos,vel,dt);
+
+			update_particle_position_rk4(E,cart_pos, vel, dt, 2);
+
 			//printf("new position after advection:\n\tx = %f, y = %f\n\n", cart_pos[0], cart_pos[1]);
 			// convert cart_pos back to lon lat
 			pos[1] = r2d(cart_pos[1]/R);	// calc lat first
@@ -880,9 +859,10 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 			//printf("new position after advection:\n\tlon = %f, lat = %f\n\n", pos[0], pos[1]);
 
 
-			fprintf(out,"%f %f %f %f\n", pos[0], pos[1], vel[0], vel[1]);
+			fprintf(out,"%f %f %f %f %f %f\n", pos[0], pos[1], vel[0], vel[1], dt, current_time);
 			// figure out what time level we are at
-			t = floor(current_time/10800.0);
+			t = floor(current_time/10800.0);	// only valid for 3 hourly files, should figure this out dynamically!
+
 			//printf("**** current_time = %f, dt = %f, t = %d\n",current_time,dt,t);
 		}while(t<E->nc.t);
 		fprintf(out,"\n");
