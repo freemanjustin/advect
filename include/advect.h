@@ -39,7 +39,7 @@
 
 typedef struct{
 	double	node_coord[4][2];
-	double	node_value[4];
+	double	node_value[4][2];
 	double	interp_weights[4];
 }element;
 

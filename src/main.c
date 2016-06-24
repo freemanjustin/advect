@@ -9,12 +9,6 @@ double relative_difference(double a, double b){
 	return d == 0.0 ? 0.0 : ABS(a - b) / d;	// wtf is this?
 }
 
-double analytic_function(double x, double y){
-
-	//return(sin(x)*cos(y));
-	return(sin(x*y)+cos(y*x));
-}
-
 double ***malloc3d_double(int dim1, int dim2, int dim3)
 {
 
@@ -109,37 +103,6 @@ void get_dimension(e *E, char *dim_name, size_t *dim){
 }
 
 
-
-void do_test(e *E){
-
-	double	interp_value;
-
-	// construct a test element
-	// anticlockwise numbering
-	E->el[0].node_value[0] = 100.0;
-	E->el[0].node_value[1] = 60.0;
-	E->el[0].node_value[2] = 50.0;
-	E->el[0].node_value[3] = 90.0;
-
-	printf("node values: 0 = %f, 1 = %f, 2 = %f, 3 = %f\n", E->el[0].node_value[0], E->el[0].node_value[1], E->el[0].node_value[2], E->el[0].node_value[3]);
-
-	// this is the element coordinates
-	E->el[0].node_coord[0][0] = 2.0;	E->el[0].node_coord[0][1] = 2.0; // 0
-	E->el[0].node_coord[1][0] = 4.0;	E->el[0].node_coord[1][1] = 2.0; // 1
-	E->el[0].node_coord[2][0] = 4.0;	E->el[0].node_coord[2][1] = 3.0; // 2
-	E->el[0].node_coord[3][0] = 2.0;	E->el[0].node_coord[3][1] = 3.0; // 3
-
-	// this is the interpolation point
-	E->pos[0] = 2.5;
-	E->pos[1] = 2.5;
-
-	calculate_interpolation_weights(&E->el[0], E->xi, E->eta, E->pos);
-
-	interpolate_point(&E->el[0], &interp_value);
-	printf("Interp value from precomput weights = %f\n", interp_value);
-
-}
-
 void init_xi_eta(e *E){
 
 	// anti-clockwise element numbering
@@ -170,53 +133,6 @@ void init_xi_eta(e *E){
 
 }
 
-
-
-
-void generate_mesh(e *E, int nx, int ny){
-
-	int i,j, el;
-	double x,y,xstart, ystart, xend,yend,dx, dy;
-
-	dx = 2.0/(double)(nx);
-	dy = 2.0/(double)(ny);
-
-	//printf("# dx = %f, dy = %f\n", dx, dy);
-
-	// these are the starting positions for x and y
-	xstart = -1.0;
-	xend = 1.0;
-
-	ystart = -1.0;
-	yend = 1.0;
-
-	x = xstart;
-	y = ystart;
-	el = 0;
-	for(i=0;i<ny;i++){	// rows
-		for(j=0;j<nx;j++){	// cols
-
-			E->el[el].node_coord[0][0] = x;		E->el[el].node_coord[0][1] = y; // 0
-			E->el[el].node_coord[1][0] = x+dx;	E->el[el].node_coord[1][1] = y; // 1
-			E->el[el].node_coord[2][0] = x+dx;	E->el[el].node_coord[2][1] = y+dy; // 2
-			E->el[el].node_coord[3][0] = x;		E->el[el].node_coord[3][1] = y+dy; // 3
-
-			E->el[el].node_value[0] = analytic_function(x,y);
-			E->el[el].node_value[1] = analytic_function(x+dx,y);
-			E->el[el].node_value[2] = analytic_function(x+dx,y+dy);
-			E->el[el].node_value[3] = analytic_function(x,y+dy);
-
-			el++;
-			// update lower left coordinte for next element calc
-
-			x = x + (dx);
-		}
-		y = y + (dy);
-		x = xstart;
-
-	}
-
-}
 
 void print_elements(e *E){
 
@@ -254,19 +170,19 @@ void print_mesh(e *E, int nx, int ny){
 	el=0;
 	for(i=0;i<ny;i++){
 		for(j=0;j<nx;j++){
-			fprintf(out, "%f %f %f\n", E->el[el].node_coord[0][0], E->el[el].node_coord[0][1], E->el[el].node_value[0]);
+			fprintf(out, "%f %f %f\n", E->el[el].node_coord[0][0], E->el[el].node_coord[0][1], E->el[el].node_value[0][0]);
 			el++;
 		}
-		fprintf(out,"%f %f %f\n", E->el[el-1].node_coord[1][0], E->el[el-1].node_coord[1][1], E->el[el-1].node_value[1]);
+		fprintf(out,"%f %f %f\n", E->el[el-1].node_coord[1][0], E->el[el-1].node_coord[1][1], E->el[el-1].node_value[1][0]);
 		fprintf(out,"\n");
 	}
 	// print the top row
 	el = el-nx;
 	for(j=0;j<nx;j++){
-		fprintf(out,"%f %f %f\n", E->el[el].node_coord[3][0], E->el[el].node_coord[3][1], E->el[el].node_value[3]);
+		fprintf(out,"%f %f %f\n", E->el[el].node_coord[3][0], E->el[el].node_coord[3][1], E->el[el].node_value[3][0]);
 		el++;
 	}
-	fprintf(out,"%f %f %f\n", E->el[el-1].node_coord[2][0], E->el[el-1].node_coord[2][1], E->el[el-1].node_value[2]);
+	fprintf(out,"%f %f %f\n", E->el[el-1].node_coord[2][0], E->el[el-1].node_coord[2][1], E->el[el-1].node_value[2][0]);
 	fclose(out);
 }
 
@@ -634,103 +550,6 @@ int	get_owner_elementII(e *E, double *pos){
 	return element;
 }
 
-void test_interp(e *E){
-
-	int	i,j;
-	int	nx, ny;
-	double x,y,xstart, ystart, dx, dy;
-	double xend, yend;
-	double pos[2];
-	int	element;
-	double	interp_value;
-	double	analytic_value;
-	FILE	*out;
-	FILE	*error;
-
-
-
-	// set up the source mesh
-	E->nx = 128;
-	E->ny = 128;
-
-	E->nElements = E->nx*E->ny ;
-
-	E->el = malloc(E->nElements*sizeof(element));
-	E->nodesPerEl = 4;
-
-	E->msh.x = malloc((E->nx+1) * sizeof(double));
-	E->msh.y = malloc((E->ny+1) * sizeof(double));
-
-	init_xi_eta(E);
-
-	generate_mesh(E, E->nx, E->ny);
-	//print_elements(E);
-	print_mesh(E,E->nx,E->ny);
-	store_mesh(E, E->nx, E->ny);
-
-
-
-	out = fopen("interp.dat","w");
-	error = fopen("error.dat","w");
-
-
-	// set up the target mesh
-	// generate a list of nodal coordinates to interpolate onto
-	nx = 257;//E->nx;
-	ny = 317;//E->ny;
-
-	xstart = -1.0;
-	xend = 1.0;
-	ystart = -1.0;
-	yend= 1.0;
-
-	x = xstart;
-	y = ystart;
-
-	dx = (xend-xstart)/(double)(nx);
-	dy = (yend-ystart)/(double)(ny);
-
-
-	//#pragma omp parallel for private(i,j,pos, element, x, y, interp_value, analytic_value)
-	for(i=0;i<=ny;i++){
-		for(j=0;j<=nx;j++){
-
-			if(j==0) pos[0] = xstart;
-			else if(j==nx) pos[0] = xend;
-			else if(relative_difference(x,0.0)<TOLERANCE) x = 0.0;
-			else pos[0] = x;
-
-			if(i==0) pos[1] = ystart;
-			else if(i==ny) pos[1] = yend;
-			else if(relative_difference(y,0.0)<TOLERANCE) y = 0.0;
-			else pos[1] = y;
-
-			//printf("\n\n\npos = ( %f, %f)\n", pos[0], pos[1]);
-
-			// find out which element this lies within
-			element = get_owner_element(E, pos);
-			//element = get_owner_elementII(E, pos);
-
-			calculate_interpolation_weights(&E->el[element], E->xi, E->eta, pos);
-			interpolate_point(&E->el[element], &interp_value);
-
-			analytic_value = analytic_function(pos[0],pos[1]);
-
-			fprintf(out,"%f %f %f\n", pos[0], pos[1], interp_value);
-			fprintf(error,"%f %f %.4g\n", pos[0], pos[1], interp_value-analytic_value);//100.0*(fabs(interp_value - analytic_value))/fabs(analytic_value)  );
-
-			x = x + (dx);
-		}
-		fprintf(out,"\n");
-		fprintf(error,"\n");
-		y = y + (dy);
-		x = xstart;
-	}
-
-	fclose(out);
-	fclose(error);
-
-}
 
 
 void update_particle_position_euler(double *pos, double *vel, double dt)
@@ -904,13 +723,6 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 				}
 
 			}
-
-			// now set the nodal value for this element
-			E->el[el].node_value[0] = E->u[t][i][j];
-			E->el[el].node_value[1] = E->u[t][i][j+1];
-			E->el[el].node_value[2] = E->u[t][i+1][j+1];
-			E->el[el].node_value[3] = E->u[t][i+1][j];
-
 			el++;
 		}
 	}
@@ -1015,15 +827,20 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 			//printf("## becomes: cart: %f, %f\n\n", cart_pos[0], cart_pos[1]);
 			//exit(1);
 
-			// set up the nodal value for u
+			// set up the nodal value for velocity
 			el = 0;
 			for(i=0;i<E->ny;i++){
 				for(j=0;j<E->nx;j++){
 
-					E->el[el].node_value[0] = E->u[t][i][j];
-					E->el[el].node_value[1] = E->u[t][i][j+1];
-					E->el[el].node_value[2] = E->u[t][i+1][j+1];
-					E->el[el].node_value[3] = E->u[t][i+1][j];
+					E->el[el].node_value[0][0] = E->u[t][i][j];
+					E->el[el].node_value[1][0] = E->u[t][i][j+1];
+					E->el[el].node_value[2][0] = E->u[t][i+1][j+1];
+					E->el[el].node_value[3][0] = E->u[t][i+1][j];
+
+					E->el[el].node_value[0][1] = E->v[t][i][j];
+					E->el[el].node_value[1][1] = E->v[t][i][j+1];
+					E->el[el].node_value[2][1] = E->v[t][i+1][j+1];
+					E->el[el].node_value[3][1] = E->v[t][i+1][j];
 
 					el++;
 				}
@@ -1033,9 +850,10 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 			el = get_owner_element(E, pos);
 			calculate_interpolation_weights(&E->el[el], E->xi, E->eta, pos);
 			// interpolate the nodal velocity to the current point
-			interpolate_point(&E->el[el], &interp_value);
-			vel[0] = interp_value;	// velocity is in metres per second
+			interpolate_point(&E->el[el], &vel);
+			//vel[0] = interp_value;	// velocity is in metres per second
 
+			/*
 			// set up nodal value for v
 			this_el = 0;
 			for(i=0;i<E->ny;i++){
@@ -1051,9 +869,11 @@ void test_interp_netcdf(e *E, char *file1, char *file2){
 			}
 			// do we need to do this twice??
 			//el = get_owner_element(E, pos);
+			*/
+
 			// interpolate velocity to this point
-			interpolate_point(&E->el[el], &interp_value);
-			vel[1] = interp_value;	// velocity is in metres per second
+			//interpolate_point(&E->el[el], &interp_value);
+			//vel[1] = interp_value;	// velocity is in metres per second
 
 			// advect the partcle
 			// ofam surface fields are 3 hourly
@@ -1121,9 +941,15 @@ void interpolate_point(element *el, double *interp_value){
 
 	int i;
 
-	*interp_value = 0.0;
+	interp_value[0] = 0.0;	// u interpolated
+	interp_value[1] = 0.0;	// v interpolated
+	// get u
 	for(i=0; i < 4; i++)
-		*interp_value += el->node_value[i] * el->interp_weights[i];
+		interp_value[0] += el->node_value[i][0] * el->interp_weights[i];
+
+	// get v
+	for(i=0; i < 4; i++)
+		interp_value[1] += el->node_value[i][1] * el->interp_weights[i];
 
 }
 
